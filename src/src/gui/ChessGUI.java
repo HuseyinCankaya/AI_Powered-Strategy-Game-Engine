@@ -135,12 +135,11 @@ public class ChessGUI extends JFrame {
     }
 
     private void triggerAIMove() {
-        // AI hesaplaması arayüzü (UI) dondurmasın diye ayrı bir Thread'de çalıştırılır
         new Thread(() -> {
-            Move bestMove = ai.findBestMove(turnManager.getBoard(), 4, PieceColor.BLACK); // Derinlik 4
+            // Maksimum 10 derinliğe kadar git ama 3 saniye (3000 ms) sonunda dur!
+            Move bestMove = ai.findBestMove(turnManager.getBoard(), 10, 3000, PieceColor.BLACK);
 
             if (bestMove != null) {
-                // Swing arayüzünü güvenli bir şekilde güncelle
                 SwingUtilities.invokeLater(() -> {
                     turnManager.makeTurn(bestMove);
                     updateBoardUI();

@@ -10,80 +10,129 @@ import java.util.List;
 public class MinimaxEngine {
     private BoardEvaluator evaluator;
     private MoveValidator validator;
-    private MoveOrderer orderer; // YENİ EKLENDİ
+    private MoveOrderer orderer;
+    private TranspositionTable transpositionTable;
+
+    // Zaman yönetimi için değişkenler
+    private long startTime;
+    private long timeLimit;
+    private boolean isTimeUp;
 
     public MinimaxEngine() {
         this.evaluator = new BoardEvaluator();
         this.validator = new MoveValidator();
-        this.orderer = new MoveOrderer(); // YENİ EKLENDİ
+        this.orderer = new MoveOrderer();
+        this.transpositionTable = new TranspositionTable();
     }
 
-    public Move findBestMove(Board board, int depth, PieceColor aiColor) {
+    /**
+     * AI'ın belirli bir süre (ms) içinde bulabildiği en derin hamleyi döndürür.
+     */
+    public Move findBestMove(Board board, int maxDepth, long timeLimitMs, PieceColor aiColor) {
+        this.startTime = System.currentTimeMillis();
+        this.timeLimit = timeLimitMs;
+        this.isTimeUp = false;
+
+        Move bestMoveFoundSoFar = null;
         List<Move> legalMoves = validator.getLegalMoves(board, aiColor);
         if (legalMoves.isEmpty()) return null;
 
-        // YENİ EKLENDİ: Hamleleri incelemeden önce sırala!
-        orderer.orderMoves(legalMoves);
+        // --- ITERATIVE DEEPENING DÖNGÜSÜ ---
+        // 1. derinlikten başla, süre bitene kadar derinliği artır
+        for (int currentDepth = 1; currentDepth <= maxDepth; currentDepth++) {
 
-        Move bestMove = null;
-        boolean isMaximizing = (aiColor == PieceColor.WHITE);
-        int bestScore = isMaximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+            if (isTimeUp()) break;
 
-        for (Move move : legalMoves) {
-            Piece captured = board.makeMove(move);
-            int currentScore = alphaBeta(board, depth - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, !isMaximizing);
-            board.unmakeMove(move, captured);
+            Move bestMoveAtThisDepth = null;
+            int bestScore = (aiColor == PieceColor.WHITE) ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 
-            if (isMaximizing) {
-                if (currentScore > bestScore) {
-                    bestScore = currentScore;
-                    bestMove = move;
-                }
-            } else {
-                if (currentScore < bestScore) {
-                    bestScore = currentScore;
-                    bestMove = move;
+            orderer.orderMoves(legalMoves);
+
+            for (Move move : legalMoves) {
+                Piece captured = board.makeMove(move);
+                int score = alphaBeta(board, currentDepth - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, aiColor == PieceColor.BLACK);
+                board.unmakeMove(move, captured);
+
+                if (isTimeUp()) break; // Süre bittiyse bu derinliği tamamlama
+
+                if (aiColor == PieceColor.WHITE) {
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMoveAtThisDepth = move;
+                    }
+                } else {
+                    if (score < bestScore) {
+                        bestScore = score;
+                        bestMoveAtThisDepth = move;
+                    }
                 }
             }
+
+            // Eğer süremiz yetip bu derinliği bitirebildiysek, sonucu güncelle
+            if (!isTimeUp() && bestMoveAtThisDepth != null) {
+                bestMoveFoundSoFar = bestMoveAtThisDepth;
+                // Bir sonraki derinlik için hamleleri sıralarken bu derinlikteki en iyiyi başa al
+                legalMoves.remove(bestMoveAtThisDepth);
+                legalMoves.add(0, bestMoveAtThisDepth);
+            }
         }
-        return bestMove;
+
+        return bestMoveFoundSoFar;
     }
 
     private int alphaBeta(Board board, int depth, int alpha, int beta, boolean isMaximizing) {
+        // Her 2048 düğümde bir saati kontrol et (Sürekli sistem saati sormak motoru yavaşlatır)
+        if (isTimeUp()) return isMaximizing ? -20000 : 20000;
+
+        long boardKey = board.getZobristKey();
+        TranspositionTable.TTEntry entry = transpositionTable.probe(boardKey);
+        if (entry != null && entry.depth >= depth) return entry.score;
+
         if (depth == 0) return evaluator.evaluate(board);
 
         PieceColor currentColor = isMaximizing ? PieceColor.WHITE : PieceColor.BLACK;
         List<Move> legalMoves = validator.getLegalMoves(board, currentColor);
-
         if (legalMoves.isEmpty()) return isMaximizing ? -20000 : 20000;
 
-        // YENİ EKLENDİ: Ağacın alt dallarını da sırala ki budama (pruning) verimli çalışsın!
         orderer.orderMoves(legalMoves);
 
+        int bestScore;
         if (isMaximizing) {
             int maxScore = Integer.MIN_VALUE;
             for (Move move : legalMoves) {
                 Piece captured = board.makeMove(move);
                 int score = alphaBeta(board, depth - 1, alpha, beta, false);
                 board.unmakeMove(move, captured);
-
+                if (isTimeUp()) break;
                 maxScore = Math.max(maxScore, score);
                 alpha = Math.max(alpha, score);
                 if (beta <= alpha) break;
             }
-            return maxScore;
+            bestScore = maxScore;
         } else {
             int minScore = Integer.MAX_VALUE;
             for (Move move : legalMoves) {
                 Piece captured = board.makeMove(move);
                 int score = alphaBeta(board, depth - 1, alpha, beta, true);
                 board.unmakeMove(move, captured);
-
+                if (isTimeUp()) break;
                 minScore = Math.min(minScore, score);
                 beta = Math.min(beta, score);
                 if (beta <= alpha) break;
             }
-            return minScore;
+            bestScore = minScore;
         }
+
+        if (!isTimeUp()) transpositionTable.store(boardKey, depth, bestScore);
+        return bestScore;
+    }
+
+    private boolean isTimeUp() {
+        if (isTimeUp) return true;
+        if (System.currentTimeMillis() - startTime >= timeLimit) {
+            isTimeUp = true;
+            return true;
+        }
+        return false;
     }
 }
