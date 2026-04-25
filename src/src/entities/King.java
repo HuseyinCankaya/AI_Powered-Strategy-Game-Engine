@@ -35,6 +35,30 @@ public class King extends Piece {
                 }
             }
         }
+        // --- ROK (CASTLING) KONTROLÜ ---
+        if (!this.hasMoved) {
+            // Kısa Rok (Kingside - h kalesi tarafı)
+            if (board.getPiece(currentRow, 5) == null && board.getPiece(currentRow, 6) == null) {
+                Piece rook = board.getPiece(currentRow, 7);
+                // Kale orada mı ve daha önce hiç oynamamış mı?
+                if (rook != null && rook.getType() == PieceType.ROOK && !rook.hasMoved()) {
+                    Move castlingMove = new Move(currentRow, currentCol, currentRow, 6, this);
+                    castlingMove.setCastling(true); // Bu hamlenin rok olduğunu işaretliyoruz
+                    legalMoves.add(castlingMove);
+                }
+            }
+
+            // Uzun Rok (Queenside - a kalesi tarafı)
+            // Uzun rok için b, c ve d sütunları (1, 2, 3 endeksleri) boş olmalıdır.
+            if (board.getPiece(currentRow, 3) == null && board.getPiece(currentRow, 2) == null && board.getPiece(currentRow, 1) == null) {
+                Piece rook = board.getPiece(currentRow, 0);
+                if (rook != null && rook.getType() == PieceType.ROOK && !rook.hasMoved()) {
+                    Move castlingMove = new Move(currentRow, currentCol, currentRow, 2, this);
+                    castlingMove.setCastling(true);
+                    legalMoves.add(castlingMove);
+                }
+            }
+        }
         return legalMoves;
     }
 

@@ -25,6 +25,22 @@ public class MoveValidator {
 
         // 2. Her hamleyi simüle et ve Şah'ın güvende kalıp kalmadığını kontrol et
         for (Move move : pseudoLegalMoves) {
+            // --- ROK İÇİN ÖZEL GÜVENLİK KURALLARI ---
+            if (move.isCastling()) {
+                int[] kingPos = findKingPosition(board, color);
+
+                // 1. Kural: Şah halihazırda tehdit altında (Check) olamaz
+                if (isSquareAttacked(board, kingPos[0], kingPos[1], color.opposite())) {
+                    continue; // Rok yapılamaz, bu dalı atla
+                }
+
+                // 2. Kural: Şahın üzerinden atladığı ara kare tehdit altında olamaz
+                // Kısa rok ise f sütunu (5), uzun rok ise d sütunu (3)
+                int passCol = (move.getToCol() == 6) ? 5 : 3;
+                if (isSquareAttacked(board, move.getFromRow(), passCol, color.opposite())) {
+                    continue; // Rok yapılamaz, bu dalı atla
+                }
+            }
             // Hamleyi tahtada sanal olarak oyna
             Piece captured = board.makeMove(move);
 

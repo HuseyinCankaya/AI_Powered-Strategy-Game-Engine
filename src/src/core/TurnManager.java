@@ -74,4 +74,12 @@ public class TurnManager {
 
     public GameState getCurrentState() { return currentState; }
     public Board getBoard() { return board; }
+
+    public MoveValidator getValidator() {
+        return validator;
+    }
+
+    public void setValidator(MoveValidator validator) {
+        this.validator = validator;
+    }
 }

@@ -45,37 +45,58 @@ public class Board {
         Piece movingPiece = grid[move.getFromRow()][move.getFromCol()];
         Piece capturedPiece = grid[move.getToRow()][move.getToCol()];
 
-        // Taşı yeni yerine koy
+        // Şahı (veya taşı) yeni yerine koy
         grid[move.getToRow()][move.getToCol()] = movingPiece;
-        // Eski yerini boşalt
         grid[move.getFromRow()][move.getFromCol()] = null;
 
-        // Eğer taş ilk kez hareket ediyorsa, bunu unmake sırasında
-        // geri alabilmek için Move sınıfına bir state eklemek gerekebilir.
-        // Şimdilik temel taşıma işlemini yapıyoruz.
         if (movingPiece != null) {
             movingPiece.setHasMoved(true);
         }
 
-        switchTurn(); // Sırayı rakibe geçir
+        // --- ROK YAPILDIYSA KALEYİ DE TAŞI ---
+        if (move.isCastling()) {
+            if (move.getToCol() == 6) { // Kısa Rok
+                Piece rook = grid[move.getFromRow()][7]; // h kalesini al
+                grid[move.getFromRow()][5] = rook;       // f karesine koy
+                grid[move.getFromRow()][7] = null;       // h karesini boşalt
+                if (rook != null) rook.setHasMoved(true);
+            } else if (move.getToCol() == 2) { // Uzun Rok
+                Piece rook = grid[move.getFromRow()][0]; // a kalesini al
+                grid[move.getFromRow()][3] = rook;       // d karesine koy
+                grid[move.getFromRow()][0] = null;       // a karesini boşalt
+                if (rook != null) rook.setHasMoved(true);
+            }
+        }
 
+        switchTurn();
         return capturedPiece;
     }
 
-    /**
-     * Oynanmış bir hamleyi geri alır. Tahtayı önceki orijinal haline döndürür.
-     */
     public void unmakeMove(Move move, Piece capturedPiece) {
         Piece movingPiece = grid[move.getToRow()][move.getToCol()];
 
-        // Taşı başladığı kareye geri koy
+        // Taşı eski yerine koy
         grid[move.getFromRow()][move.getFromCol()] = movingPiece;
-        // Yeni karesini yutulan taşla (veya boşlukla) doldur
         grid[move.getToRow()][move.getToCol()] = capturedPiece;
 
-        // Not: hasMoved durumunu orijinal haline döndürmek için
-        // daha gelişmiş bir History (Geçmiş) sistemine ihtiyaç duyacağız.
+        // --- ROK İPTAL EDİLDİYSE KALEYİ DE ESKİ YERİNE KOY ---
+        if (move.isCastling()) {
+            if (move.getToCol() == 6) { // Kısa Rok Geri Alma
+                Piece rook = grid[move.getFromRow()][5];
+                grid[move.getFromRow()][7] = rook;
+                grid[move.getFromRow()][5] = null;
+                // Rok durumunda her iki taşın da daha önce hiç oynamadığından eminiz
+                if (rook != null) rook.setHasMoved(false);
+                if (movingPiece != null) movingPiece.setHasMoved(false);
+            } else if (move.getToCol() == 2) { // Uzun Rok Geri Alma
+                Piece rook = grid[move.getFromRow()][3];
+                grid[move.getFromRow()][0] = rook;
+                grid[move.getFromRow()][3] = null;
+                if (rook != null) rook.setHasMoved(false);
+                if (movingPiece != null) movingPiece.setHasMoved(false);
+            }
+        }
 
-        switchTurn(); // Sırayı geri al
+        switchTurn();
     }
 }
