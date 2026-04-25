@@ -1,43 +1,51 @@
 import builder.BoardBuilder;
 import core.Board;
 import core.Move;
-import core.MoveValidator;
 import entities.Piece;
 import entities.PieceColor;
-import java.util.List;
+import ai.MinimaxEngine;
 
 public class Main {
     public static void main(String[] args) {
-        // 1. Test senaryosu: Standart başlangıç dizilimi
-        String startingFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        // Çoban Matı'na 1 hamle kala dizilimi. Beyazın sırası.
+        // Beyaz Vezir (f3) ve Fil (c4), Siyahın zayıf piyonuna (f7) bakıyor.
+        String scholarMateFen = "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 1";
 
-        // 2. Özel bir test senaryosu: Beyaz Şah'ın açmazda olduğu bir durum kurgulayalım
-        // (Siyah Kale, Beyaz At'ın arkasındaki Beyaz Şah'a bakıyor olsun)
-        String testFen = "r3k2r/8/8/3q4/8/8/3N4/3K4 w kq - 0 1";
+        System.out.println("--- Bristlesinger Chess Engine İlk AI Testi ---");
 
-        System.out.println("--- Bristlesinger Chess Engine Test Merkezi ---");
-
-        Board board = BoardBuilder.buildFromFEN(testFen);
+        Board board = BoardBuilder.buildFromFEN(scholarMateFen);
+        System.out.println("Başlangıç Durumu (Beyaz Oynar):");
         printBoard(board);
 
-        MoveValidator validator = new MoveValidator();
-        List<Move> legalMoves = validator.getLegalMoves(board, PieceColor.WHITE);
+        // Yapay Zeka Motorunu Başlat
+        MinimaxEngine ai = new MinimaxEngine();
 
-        System.out.println("\nBeyaz için Yasal Hamle Sayısı: " + legalMoves.size());
-        System.out.println("Yasal Hamle Listesi:");
-        for (Move move : legalMoves) {
-            System.out.println(move);
+        // Botun derinliğini (depth) ayarlıyoruz.
+        // Depth 3: "Benim hamlem -> Rakibin cevabı -> Benim cevabım" kadar ileriyi görür.
+        int searchDepth = 3;
+
+        System.out.println("\nAI " + searchDepth + " derinliğinde düşünüyor, lütfen bekleyin...");
+        long startTime = System.currentTimeMillis();
+
+        Move bestMove = ai.findBestMove(board, searchDepth, PieceColor.WHITE);
+
+        long timeElapsed = System.currentTimeMillis() - startTime;
+
+        if (bestMove != null) {
+            System.out.println("\nAI Kararını Verdi! (" + timeElapsed + " ms)");
+            System.out.println("En İyi Hamle: " + bestMove.toString());
+
+            // Hamleyi tahtada oynatıp yeni durumu görelim
+            board.makeMove(bestMove);
+            System.out.println("\nHamle Sonrası Tahta:");
+            printBoard(board);
+        } else {
+            System.out.println("AI hamle bulamadı (Mat veya Pat olabilir).");
         }
-
-        // Atın hareket edip edemediğini kontrol edelim (Açmaz testi)
-        // Eğer MoveValidator doğru çalışıyorsa, Atın Şah'ı açıkta bırakacak hamleleri listede olmamalı.
     }
 
-    /**
-     * Tahtayı terminale okunaklı bir şekilde yazdırır.
-     */
     public static void printBoard(Board board) {
-        System.out.println("\n  a b c d e f g h");
+        System.out.println("  a b c d e f g h");
         System.out.println("  ---------------");
         for (int r = 0; r < 8; r++) {
             System.out.print((8 - r) + "|");
@@ -53,7 +61,6 @@ public class Main {
             System.out.println("|" + (8 - r));
         }
         System.out.println("  ---------------");
-        System.out.println("  a b c d e f g h");
     }
 
     private static char getPieceSymbol(Piece p) {
@@ -67,7 +74,6 @@ public class Main {
             case KING: symbol = 'K'; break;
             default: symbol = '?';
         }
-        // Beyaz taşları Büyük harf, Siyah taşları küçük harf yapalım (FEN standardı)
         return p.getColor() == PieceColor.WHITE ? symbol : Character.toLowerCase(symbol);
     }
 }
