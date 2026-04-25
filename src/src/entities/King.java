@@ -15,7 +15,6 @@ public class King extends Piece {
     public List<Move> calculateMoves(Board board, int currentRow, int currentCol) {
         List<Move> legalMoves = new ArrayList<>();
 
-        // Şahın 8 komşu karesi
         int[][] moveOffsets = {
                 {1, 0}, {-1, 0}, {0, 1}, {0, -1},
                 {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
@@ -27,7 +26,6 @@ public class King extends Piece {
 
             if (isInsideBoard(nextRow, nextCol)) {
                 Piece targetPiece = board.getPiece(nextRow, nextCol);
-
                 if (targetPiece == null) {
                     legalMoves.add(new Move(currentRow, currentCol, nextRow, nextCol, this));
                 } else if (targetPiece.getColor() != this.color) {
@@ -35,21 +33,20 @@ public class King extends Piece {
                 }
             }
         }
+
         // --- ROK (CASTLING) KONTROLÜ ---
         if (!this.hasMoved) {
-            // Kısa Rok (Kingside - h kalesi tarafı)
+            // Kısa Rok (Kingside)
             if (board.getPiece(currentRow, 5) == null && board.getPiece(currentRow, 6) == null) {
                 Piece rook = board.getPiece(currentRow, 7);
-                // Kale orada mı ve daha önce hiç oynamamış mı?
                 if (rook != null && rook.getType() == PieceType.ROOK && !rook.hasMoved()) {
                     Move castlingMove = new Move(currentRow, currentCol, currentRow, 6, this);
-                    castlingMove.setCastling(true); // Bu hamlenin rok olduğunu işaretliyoruz
+                    castlingMove.setCastling(true);
                     legalMoves.add(castlingMove);
                 }
             }
 
-            // Uzun Rok (Queenside - a kalesi tarafı)
-            // Uzun rok için b, c ve d sütunları (1, 2, 3 endeksleri) boş olmalıdır.
+            // Uzun Rok (Queenside)
             if (board.getPiece(currentRow, 3) == null && board.getPiece(currentRow, 2) == null && board.getPiece(currentRow, 1) == null) {
                 Piece rook = board.getPiece(currentRow, 0);
                 if (rook != null && rook.getType() == PieceType.ROOK && !rook.hasMoved()) {
@@ -59,6 +56,7 @@ public class King extends Piece {
                 }
             }
         }
+
         return legalMoves;
     }
 

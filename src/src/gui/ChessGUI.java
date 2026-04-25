@@ -121,9 +121,9 @@ public class ChessGUI extends JFrame {
 
                 // Hamleden sonra oyun durumunu kontrol et
                 checkGameState();
-
-                // Oyun devam ediyorsa AI'ı tetikle
-                if (turnManager.getCurrentState() == GameState.ACTIVE) {
+                // Oyun devam ediyorsa VEYA Şah çekildiyse AI'ı tetikle
+                GameState currentState = turnManager.getCurrentState();
+                if (currentState == GameState.ACTIVE || currentState == GameState.CHECK) {
                     triggerAIMove();
                 }
             } else {
